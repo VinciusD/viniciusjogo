@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jogo de Ritmo - Piano Tiles</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron&display=swap');
+
+  body {
+    margin: 0;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    font-family: 'Orbitron', sans-serif;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #eee;
+    user-select: none;
+  }
+
+  h1 {
+    margin: 20px 0 5px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #00ffe7;
+    text-shadow: 0 0 10px #00ffe7;
+  }
+
+  #game {
+    position: relative;
+    width: 320px;
+    height: 480px;
+    background: #111;
+    border-radius: 12px;
+    box-shadow:
+      0 0 15px #00ffe7,
+      inset 0 0 40px #00b3a6;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  .column {
+    width: 25%;
+    height: 100%;
+    float: left;
+    border-left: 1px solid rgba(0, 255, 231, 0.15);
+    border-right: 1px solid rgba(0, 255, 231, 0.15);
+    position: relative;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
+  }
+
+  .tile {
+    position: absolute;
+    width: 80%;
+    left: 10%;
+    height: 20%;
+    background: #00ffe7;
+    border-radius: 10px;
+    box-shadow:
+      0 0 12px #00ffe7,
+      inset 0 0 12px #00ffe7;
+    cursor: pointer;
+    animation-timing-function: linear;
+    transition: box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .tile.missed {
+    background: #ff4e42;
+    box-shadow:
+      0 0 24px #ff4e42,
+      inset 0 0 16px #ff4e42;
+    animation-play-state: paused;
+  }
+
+  #scoreboard {
+    margin-top: 15px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-shadow: 0 0 7px #00ffe7;
+    letter-spacing: 0.12em;
+  }
+
+  #instructions {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #66ffffaa;
+    letter-spacing: 0.1em;
+  }
+
+  #start-btn, #restart-btn {
+    margin-top: 18px;
+    padding: 10px 28px;
+    font-size: 1rem;
+    font-weight: 700;
+    background: #00b3a6;
+    border: none;
+    border-radius: 20px;
+    color: #111;
+    text-shadow: none;
+    cursor: pointer;
+    box-shadow: 0 0 10px #00b3a6;
+    transition: background-color 0.3s ease;
+  }
+  #start-btn:hover, #restart-btn:hover {
+    background: #00ffe7;
+    color: #000;
+  }
+  #restart-btn {
+    display:none;
+  }
+
+  #gameover {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ff4e42;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 20px #ff4e42;
+    display: none;
+    user-select: none;
+  }
+
+  .precision-text {
+    position: absolute;
+    width: 100%;
+    top: 65%;
+    left: 0;
+    text-align: center;
+    font-weight: 900;
+    font-size: 1.6rem;
+    color: #00ffe7;
+    text-shadow: 0 0 8px #00ffe7;
+    pointer-events: none;
+    user-select: none;
+    opacity: 1;
+    animation: fadeup 1s forwards;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.12em;
+  }
+  .precision-text.ruim {
+    color: #ff4e42;
+    text-shadow: 0 0 16px #ff4e42;
+  }
+  .precision-text.bom {
+    color: #ffc142;
+    text-shadow: 0 0 16px #ffc142;
+  }
+  .precision-text.otimo {
+    color: #6cff7e;
+    text-shadow: 0 0 16px #6cff7e;
+  }
+  .precision-text.perfeito {
+    color: #00ffe7;
+    text-shadow: 0 0 20px #00ffe7;
+  }
+
+  @keyframes fadeup {
+    0%   {opacity: 1; transform: translateY(0);}
+    100% {opacity: 0; transform: translateY(-50px);}
+  }
+
+  /* Pulse animation for tiles on hit */
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 24px #00ffe7, inset 0 0 16px #00ffe7;
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 40px #00fff0, inset 0 0 30px #00fff0;
+      transform: scale(1.1);
+    }
+    100% {
+      box-shadow: 0 0 24px #00ffe7, inset 0 0 16px #00ffe7;
+      transform: scale(1);
+    }
+  }
+</style>
+</head>
+<body>
+  <h1>Piano Tiles</h1>
+  <div id="game">
+    <div class="column" data-col="0"></div>
+    <div class="column" data-col="1"></div>
+    <div class="column" data-col="2"></div>
+    <div class="column" data-col="3"></div>
+    <div id="gameover">Game Over</div>
+  </div>
+
+  <div id="scoreboard">Pontuação: 0</div>
+  <div id="instructions">Use mouse ou teclas 1,2,3,4 para tocar os blocos</div>
+  <button id="start-btn">Iniciar Jogo</button>
+  <button id="restart-btn">Reiniciar</button>
+
+<script>
+(() => {
+  const game = document.getElementById('game');
+  const columns = Array.from(document.querySelectorAll('.column'));
+  const scoreboard = document.getElementById('scoreboard');
+  const startBtn = document.getElementById('start-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const gameoverText = document.getElementById('gameover');
+
+  const NUM_COLS = 4;
+  const TILE_HEIGHT_PERCENT = 20; 
+  let tileSpeed = 0.5; // % per frame (starts lower and will increase)
+  let spawnInterval = 800; // ms between new tiles spawn (starts higher and decreases)
+
+  const KEY_MAP = ['1','2','3','4'];
+
+  let tiles = [];
+  let score = 0;
+  let gameLoopId = null;
+  let spawnIntervalId = null;
+  let lastTimestamp = null;
+  let isPlaying = false;
+
+  let startTime = 0;
+
+  function createTile() {
+    // spawn tile in random column
+    const colIndex = Math.floor(Math.random() * NUM_COLS);
+    const tile = document.createElement('div');
+    tile.classList.add('tile');
+    tile.style.top = '-20%'; // start above the board
+    tile.dataset.col = colIndex;
+    // Append to the correct column
+    columns[colIndex].appendChild(tile);
+
+    tiles.push({
+      element: tile,
+      col: colIndex,
+      top: -20,
+      height: TILE_HEIGHT_PERCENT,
+      hit: false,
+      missed: false
+    });
+
+    // click handler for mouse/touch
+    tile.addEventListener('click', () => {
+      if (!isPlaying) return;
+      if (!tile.classList.contains('missed')) {
+        hitTile(tile);
+      }
+    });
+  }
+
+  // Show precision feedback text in a column
+  function showPrecisionText(colIndex, text, className) {
+    const precisionEl = document.createElement('div');
+    precisionEl.classList.add('precision-text', className);
+    precisionEl.textContent = text;
+    columns[colIndex].appendChild(precisionEl);
+    setTimeout(() => {
+      if (precisionEl.parentNode) precisionEl.parentNode.removeChild(precisionEl);
+    }, 1000);
+  }
+
+  function hitTile(tileEl) {
+    const index = tiles.findIndex(t => t.element === tileEl);
+    if (index === -1) return;
+
+    const tile = tiles[index];
+    if (tile.hit || tile.missed) return;
+
+    // Allowed hit only near bottom zone (80-100%)
+    if (tile.top >= 80 && tile.top <= 100) {
+      const centerIdeal = 90; // ideal perfect hit around 90% top
+      const diff = Math.abs(tile.top - centerIdeal);
+
+      // Determine precision level
+      let precision = '';
+      let points = 0;
+      if (diff <= 3) {
+        precision = 'PERFEITO';
+        points = 3;
+      } else if (diff <= 6) {
+        precision = 'ÓTIMO';
+        points = 2;
+      } else if (diff <= 12) {
+        precision = 'BOM';
+        points = 1;
+      } else {
+        precision = 'RUIM';
+        points = 0;
+      }
+
+      // Show precision feedback
+      showPrecisionText(tile.col, precision, precision.toLowerCase());
+
+      tile.hit = true;
+      score += points;
+      updateScore();
+
+      // Visual feedback on tile and pulse animation for hits
+      const colors = {
+        'RUIM': '#ff4e42',
+        'BOM': '#ffc142',
+        'ÓTIMO': '#6cff7e',
+        'PERFEITO': '#00ffe7'
+      };
+      tile.element.style.backgroundColor = colors[precision];
+      tile.element.style.boxShadow = `0 0 40px ${colors[precision]}, inset 0 0 30px ${colors[precision]}`;
+      tile.element.style.animation = 'pulse 0.6s ease-out';
+
+      setTimeout(() => {
+        if (tile.element.parentNode) tile.element.parentNode.removeChild(tile.element);
+      }, 400);
+
+      tiles.splice(index, 1);
+    }
+  }
+
+  function updateScore() {
+    scoreboard.textContent = 'Pontuação: ' + score;
+  }
+
+  function gameOver() {
+    isPlaying = false;
+    cancelAnimationFrame(gameLoopId);
+    clearInterval(spawnIntervalId);
+    gameoverText.style.display = 'block';
+    restartBtn.style.display = 'inline-block';
+    startBtn.style.display = 'none';
+  }
+
+  function restartGame() {
+    // Remove leftover tiles
+    tiles.forEach(t => {
+      if (t.element.parentNode) t.element.parentNode.removeChild(t.element);
+    });
+    tiles = [];
+    score = 0;
+    updateScore();
+    gameoverText.style.display = 'none';
+    restartBtn.style.display = 'none';
+    startBtn.style.display = 'inline-block';
+
+    tileSpeed = 0.5;
+    spawnInterval = 800;
+  }
+
+  function gameLoop(timestamp) {
+    if (!lastTimestamp) {
+      lastTimestamp = timestamp;
+      startTime = timestamp;
+    }
+    const elapsed = timestamp - lastTimestamp;
+    const totalElapsed = timestamp - startTime;
+    lastTimestamp = timestamp;
+
+    // Increase speed over time (every 10 seconds speed up and spawn more frequent)
+    if (totalElapsed > 0 && totalElapsed % 10000 < 16) { // approximate: at multiples of ten seconds
+      tileSpeed += 0.05;
+      if (spawnInterval > 300) spawnInterval -= 50;
+
+      clearInterval(spawnIntervalId);
+      spawnIntervalId = setInterval(spawnTiles, spawnInterval);
+    }
+
+    tiles.forEach((tile, idx) => {
+      if (tile.hit || tile.missed) return;
+      tile.top += (tileSpeed * elapsed / 16); // Normalize speed for ~60fps
+
+      if (tile.top > 100) {
+        // Tile missed
+        tile.missed = true;
+        tile.element.classList.add('missed');
+        gameOver();
+      } else {
+        tile.element.style.top = tile.top + '%';
+      }
+    });
+
+    if (isPlaying) {
+      gameLoopId = requestAnimationFrame(gameLoop);
+    }
+  }
+
+  function spawnTiles() {
+    if (!isPlaying) return;
+    createTile();
+  }
+
+  // Keyboard controls
+  window.addEventListener('keydown', (e) => {
+    if (!isPlaying) return;
+    const key = e.key;
+    const colIndex = KEY_MAP.indexOf(key);
+    if (colIndex !== -1) {
+      // Find the first tile in that column near bottom and hit it
+      for (let tile of tiles) {
+        if (tile.col === colIndex && !tile.hit && !tile.missed && tile.top >= 80 && tile.top <= 100) {
+          hitTile(tile.element);
+          break;
+        }
+      }
+    }
+  });
+
+  startBtn.addEventListener('click', () => {
+    restartGame();
+    isPlaying = true;
+    lastTimestamp = null;
+    gameoverText.style.display = 'none';
+    startBtn.style.display = 'none';
+    restartBtn.style.display = 'none';
+    spawnIntervalId = setInterval(spawnTiles, spawnInterval);
+    gameLoopId = requestAnimationFrame(gameLoop);
+  });
+
+  restartBtn.addEventListener('click', () => {
+    restartGame();
+  });
+
+})();
+</script>
+</body>
+</html>
+
